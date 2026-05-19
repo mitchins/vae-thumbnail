@@ -1,0 +1,49 @@
+name: Build
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  verify:
+    name: Lint, Test, and Analyze
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+      - name: Install SwiftLint and SwiftFormat
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew install swiftlint swiftformat
+      - name: Run SwiftFormat
+        shell: bash
+        run: Scripts/swiftformat.sh --lint
+      - name: Run SwiftLint
+        shell: bash
+        run: Scripts/swiftlint.sh
+      - name: Run package tests with coverage
+        shell: bash
+        run: Scripts/test.sh --coverage
+      - name: Convert coverage for Sonar
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/coverage
+          Scripts/xccov_to_sonar_generic.sh \
+            build/coverage/sonar-generic-coverage.xml \
+            "$GITHUB_WORKSPACE" \
+            build/test-results/VAEThumbnailKit.xcresult
+      - name: SonarQube Scan
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@59db25f34e16620e48ab4bb9e4a5dce155cb5432 # v8.0.0

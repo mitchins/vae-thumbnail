@@ -1,0 +1,16 @@
+excluded:
+  - .build
+  - .swiftpm
+  - build
+  - reports
+
+disabled_rules:
+  - cyclomatic_complexity
+  - file_length
+  - function_body_length
+  - line_length
+  - nesting
+  - opening_brace
+  - type_body_length
+
+reporter: xcode
