@@ -3,11 +3,11 @@
 VAEThumbnailKit is a small Apple-platform Swift package for decoding versioned,
 base64-packed VAE thumbnail payloads into displayable placeholder images.
 
-The package currently ships two bundled decoders: the original grayscale
+The package ships two bundled decoders: the original grayscale
 `placeholder_ae_v1` model under `placeholder_ae_v1_gray`, and a real RGB
 `placeholder_ae_v2_rgb` model trained on a public Places365 small balanced
-subset. The public surface is still small: pass a payload string in, optionally
-provide a bundled-model hint, and get a Core Graphics image out.
+subset. The public surface stays small: pass a payload string in, optionally
+pin a bundled model, and get a Core Graphics image out.
 
 ## Features
 
@@ -15,7 +15,7 @@ provide a bundled-model hint, and get a Core Graphics image out.
 - Small Swift API with explicit input, configuration, output, and error types
 - Explicit bundled-model hints plus automatic model selection
 - Grayscale-first default behavior with an explicit future-facing color API
-- No Filmy app types, view models, or bundle assumptions in the package
+- No app-specific types, view models, or bundle assumptions in the package
 - Payload-only tests; no private or third-party source images are shipped
 
 ## Requirements
@@ -27,7 +27,7 @@ provide a bundled-model hint, and get a Core Graphics image out.
 
 ## Installation
 
-During Filmy migration, use a local path dependency:
+During local development, use a local path dependency:
 
 ```swift
 dependencies: [
@@ -97,6 +97,16 @@ let rgbInput = VAEThumbnailInput(latentPayload: "j5OydX+gm5Z2jHKJjYxpd5jCiLmSkFN
 let rgbOutput = try generator.generateThumbnailSynchronously(from: rgbInput)
 ```
 
+## Preview
+
+Three samples are enough here. The BW column is the same sample rendered in grayscale, so the comparison stays aligned and quiet.
+
+| Original | Color | BW |
+| --- | --- | --- |
+| <img src="README-assets/preview-1-original.png" alt="Public Places365 original sample 1" width="84" /> | <img src="README-assets/preview-1-color.png" alt="Public Places365 color reconstruction sample 1" width="84" /> | <img src="README-assets/preview-1-bw.png" alt="Public Places365 grayscale reconstruction sample 1" width="84" /> |
+| <img src="README-assets/preview-2-original.png" alt="Public Places365 original sample 2" width="84" /> | <img src="README-assets/preview-2-color.png" alt="Public Places365 color reconstruction sample 2" width="84" /> | <img src="README-assets/preview-2-bw.png" alt="Public Places365 grayscale reconstruction sample 2" width="84" /> |
+| <img src="README-assets/preview-3-original.png" alt="Public Places365 original sample 3" width="84" /> | <img src="README-assets/preview-3-color.png" alt="Public Places365 color reconstruction sample 3" width="84" /> | <img src="README-assets/preview-3-bw.png" alt="Public Places365 grayscale reconstruction sample 3" width="84" /> |
+
 ## Color Support
 
 The bundled models now have different output capabilities.
@@ -127,17 +137,15 @@ swift run BasicThumbnailCLI \
 The bundled decoders and metadata are author-generated artifacts, but they do
 not all share the same provenance.
 
-- `placeholder_ae_v1_gray` was extracted from Filmy's private grayscale
-  placeholder research path and is retained for backward-compatible payloads.
+- `placeholder_ae_v1_gray` is the legacy grayscale model retained for
+  backward-compatible payloads.
 - `placeholder_ae_v2_rgb` was trained on a public Places365 small validation
   subset capped to 32 images per class, then exported to CoreML.
 - The shipped files live under `Sources/VAEThumbnailKit/Resources/Models/`.
 - The training corpora themselves are not included in this repository.
 - No private app credentials, analytics IDs, signing assets, or user images are
   included here.
-- `placeholder_ae_v1_gray` still reflects low-resolution Flickr thumbnail
-  derivatives gathered in the private Filmy workspace, so the residual-risk note
-  remains relevant for that legacy model.
+- `placeholder_ae_v1_gray` still reflects the older grayscale payload contract.
 - `placeholder_ae_v2_rgb` uses only public Places365 inputs and does not bundle
   any source images.
 
@@ -152,11 +160,12 @@ package bundle:
 - payload contract: 24 latent bytes, base64-encoded to 32 characters
 
 The research scripts that prepare this dataset and export the model live under
-`research/placeholders/src/` in the Filmy workspace.
+`research/placeholders/src/` in the workspace.
 
 ## Limitations
 
-- Existing Filmy service payloads are still `placeholder_ae_v1` grayscale payloads unless and until the service-side encoder contract is updated.
+- Existing grayscale payloads are still `placeholder_ae_v1` payloads unless and
+  until the encoder contract is updated.
 - Both bundled models currently target 16x16 square latent previews before client-side scaling.
 - `placeholder_ae_v1_gray` remains in the package for backward compatibility, so public consumers should choose their payload/version contract explicitly.
 
@@ -173,4 +182,4 @@ and SonarCloud analysis. The first public package tag is intended to be
 `1.0.0`.
 
 See [reports/extraction_summary.md](reports/extraction_summary.md) for the
-Filmy migration notes and measured impact.
+extraction notes and measured impact.
