@@ -165,10 +165,10 @@ public final class VAEThumbnailGenerator: VAEThumbnailGenerating, @unchecked Sen
             return resources
         }
 
-          if configuration.colorMode == .color,
-              !resourcesByModel.values.contains(where: \.supportsColorOutput)
-        {
-            throw VAEThumbnailError.colorModelUnavailable
+        if configuration.colorMode == .color {
+            if !resourcesByModel.values.contains(where: \.supportsColorOutput) {
+                throw VAEThumbnailError.colorModelUnavailable
+            }
         }
 
         throw VAEThumbnailError.noCompatibleModelForPayload(

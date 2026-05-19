@@ -11,12 +11,14 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  lint:
-    name: Lint and Format
+  verify:
+    name: Lint, Test, and Analyze
     runs-on: macos-15
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
       - name: Install SwiftLint and SwiftFormat
         shell: bash
         run: |
@@ -28,15 +30,6 @@ jobs:
       - name: Run SwiftLint
         shell: bash
         run: Scripts/swiftlint.sh
-
-  test:
-    name: Test (macOS)
-    runs-on: macos-15
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 0
       - name: Run package tests with coverage
         shell: bash
         run: Scripts/test.sh --coverage
@@ -49,27 +42,6 @@ jobs:
             build/coverage/sonar-generic-coverage.xml \
             "$GITHUB_WORKSPACE" \
             build/test-results/VAEThumbnailKit.xcresult
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: sonar-coverage
-          path: build/coverage/
-          if-no-files-found: error
-
-  sonar:
-    name: Sonar (Linux)
-    needs: test
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 0
-      - name: Download coverage artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: sonar-coverage
-          path: build/coverage
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@59db25f34e16620e48ab4bb9e4a5dce155cb5432 # v8.0.0
         env:
