@@ -6,6 +6,26 @@ import Foundation
 @testable import VAEThumbnailKit
 import XCTest
 
+private struct ResizeThumbnailTestCase {
+    let input: VAEThumbnailInput
+    let configuration: VAEThumbnailConfiguration
+    let expectedPixelSize: CGSize
+    let expectedColorMode: VAEThumbnailRenderedColorMode
+}
+
+private struct TemporaryModelFixture {
+    let model: VAEThumbnailBundledModel
+    let metadataJSON: String?
+    let includeDecoder: Bool
+}
+
+private struct SelectionThumbnailTestCase {
+    let fixtures: [TemporaryModelFixture]
+    let input: VAEThumbnailInput
+    let configuration: VAEThumbnailConfiguration
+    let expectedError: VAEThumbnailError
+}
+
 final class VAEThumbnailGeneratorTests: XCTestCase {
     private let validPayload = "iHF9oYBndICMcZqMeXeZjwD/"
     private let validRGBPayload = "j5OydX+gm5Z2jHKJjYxpd5jCiLmSkFNq"
@@ -101,41 +121,36 @@ final class VAEThumbnailGeneratorTests: XCTestCase {
     func testRequestedOutputSizeResizesDecodedImageAcrossQualities() async throws {
         let generator = try VAEThumbnailGenerator()
 
-        let cases: [(
-            input: VAEThumbnailInput,
-            configuration: VAEThumbnailConfiguration,
-            expectedPixelSize: CGSize,
-            expectedColorMode: VAEThumbnailRenderedColorMode
-        )] = [
-            (
-                .init(latentPayload: validPayload),
-                VAEThumbnailConfiguration(
+        let cases: [ResizeThumbnailTestCase] = [
+            .init(
+                input: .init(latentPayload: validPayload),
+                configuration: VAEThumbnailConfiguration(
                     outputSize: CGSize(width: 32, height: 24),
                     colorMode: .automatic,
                     quality: .balanced
                 ),
-                CGSize(width: 32, height: 24),
-                .grayscale
+                expectedPixelSize: CGSize(width: 32, height: 24),
+                expectedColorMode: .grayscale
             ),
-            (
-                .init(latentPayload: validRGBPayload),
-                VAEThumbnailConfiguration(
+            .init(
+                input: .init(latentPayload: validRGBPayload),
+                configuration: VAEThumbnailConfiguration(
                     outputSize: CGSize(width: 20, height: 18),
                     colorMode: .color,
                     quality: .fast
                 ),
-                CGSize(width: 20, height: 18),
-                .color
+                expectedPixelSize: CGSize(width: 20, height: 18),
+                expectedColorMode: .color
             ),
-            (
-                .init(latentPayload: validPayload),
-                VAEThumbnailConfiguration(
+            .init(
+                input: .init(latentPayload: validPayload),
+                configuration: VAEThumbnailConfiguration(
                     outputSize: CGSize(width: 24, height: 24),
                     colorMode: .automatic,
                     quality: .best
                 ),
-                CGSize(width: 24, height: 24),
-                .grayscale
+                expectedPixelSize: CGSize(width: 24, height: 24),
+                expectedColorMode: .grayscale
             )
         ]
 
@@ -226,45 +241,40 @@ final class VAEThumbnailGeneratorTests: XCTestCase {
             .init(model: .grayscaleV1, metadataJSON: validMetadata, includeDecoder: true)
         ]
 
-        let cases: [(
-            fixtures: [TemporaryModelFixture],
-            input: VAEThumbnailInput,
-            configuration: VAEThumbnailConfiguration,
-            expectedError: VAEThumbnailError
-        )] = [
-            (
-                baseFixtures,
-                .init(latentPayload: validPayload, model: .rgbV2),
-                .default,
-                .requestedModelUnavailable(.rgbV2)
+        let cases: [SelectionThumbnailTestCase] = [
+            .init(
+                fixtures: baseFixtures,
+                input: .init(latentPayload: validPayload, model: .rgbV2),
+                configuration: .default,
+                expectedError: .requestedModelUnavailable(.rgbV2)
             ),
-            (
-                baseFixtures,
-                .init(latentPayload: "AA==", model: .grayscaleV1),
-                .default,
-                .invalidPayloadLength(expectedBytes: 18, actualBytes: 1)
+            .init(
+                fixtures: baseFixtures,
+                input: .init(latentPayload: "AA==", model: .grayscaleV1),
+                configuration: .default,
+                expectedError: .invalidPayloadLength(expectedBytes: 18, actualBytes: 1)
             ),
-            (
-                baseFixtures,
-                .init(latentPayload: validPayload, model: .grayscaleV1),
-                VAEThumbnailConfiguration(colorMode: .color),
-                .colorModelUnavailable
+            .init(
+                fixtures: baseFixtures,
+                input: .init(latentPayload: validPayload, model: .grayscaleV1),
+                configuration: VAEThumbnailConfiguration(colorMode: .color),
+                expectedError: .colorModelUnavailable
             ),
-            (
-                [
+            .init(
+                fixtures: [
                     .init(model: .grayscaleV1, metadataJSON: zeroOutputSizeMetadata, includeDecoder: true)
                 ],
-                .init(latentPayload: validPayload),
-                .default,
-                .invalidMetadata
+                input: .init(latentPayload: validPayload),
+                configuration: .default,
+                expectedError: .invalidMetadata
             ),
-            (
-                [
+            .init(
+                fixtures: [
                     .init(model: .grayscaleV1, metadataJSON: mismatchedOutputSizeMetadata, includeDecoder: true)
                 ],
-                .init(latentPayload: validPayload),
-                .default,
-                .unexpectedOutputShape(elementCount: 256, expectedPixels: 225)
+                input: .init(latentPayload: validPayload),
+                configuration: .default,
+                expectedError: .unexpectedOutputShape(elementCount: 256, expectedPixels: 225)
             )
         ]
 
@@ -437,12 +447,6 @@ final class VAEThumbnailGeneratorTests: XCTestCase {
         """
     }
 
-    private struct TemporaryModelFixture {
-        let model: VAEThumbnailBundledModel
-        let metadataJSON: String?
-        let includeDecoder: Bool
-    }
-
     private func makeTemporaryBundle(models: [TemporaryModelFixture]) throws -> (Bundle, URL) {
         let fileManager = FileManager.default
         let bundleURL = fileManager.temporaryDirectory
@@ -508,6 +512,9 @@ final class VAEThumbnailGeneratorTests: XCTestCase {
         ]
 
         let data = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
-        return String(decoding: data, as: UTF8.self)
+        guard let json = String(bytes: data, encoding: .utf8) else {
+            throw CocoaError(.fileReadInapplicableStringEncoding)
+        }
+        return json
     }
 }
