@@ -208,6 +208,45 @@ final class VAEThumbnailGeneratorTests: XCTestCase {
         }
     }
 
+    func testAutomaticSelectionRejectsPayloadWithNoCompatibleModel() async throws {
+        let generator = try VAEThumbnailGenerator()
+
+        do {
+            _ = try await generator.generateThumbnail(from: .init(latentPayload: "AA=="))
+            XCTFail("Expected no compatible model to throw.")
+        } catch let error as VAEThumbnailError {
+            XCTAssertEqual(
+                error,
+                .noCompatibleModelForPayload(actualBytes: 1, requestedColorMode: .automatic, requestedModel: nil)
+            )
+        } catch {
+            XCTFail("Expected VAEThumbnailError, got \(error).")
+        }
+    }
+
+    func testColorRequestOnGrayscaleOnlyBundleThrowsColorModelUnavailable() throws {
+        let validMetadata = try makeMetadataJSON()
+        let (bundle, bundleURL) = try makeTemporaryBundle(
+            models: [
+                .init(model: .grayscaleV1, metadataJSON: validMetadata, includeDecoder: true)
+            ]
+        )
+        defer {
+            try? FileManager.default.removeItem(at: bundleURL)
+        }
+
+        let generator = try VAEThumbnailGenerator(bundle: bundle)
+
+        XCTAssertThrowsError(
+            try generator.generateThumbnailSynchronously(
+                from: .init(latentPayload: validPayload),
+                configuration: VAEThumbnailConfiguration(colorMode: .color)
+            )
+        ) { error in
+            XCTAssertEqual(error as? VAEThumbnailError, .colorModelUnavailable)
+        }
+    }
+
     func testGeneratorInitializationRejectsMalformedBundles() throws {
         let validMetadata = try makeMetadataJSON()
         let invalidQuantizeMetadata = try makeMetadataJSON(quantizeBits: 7)
