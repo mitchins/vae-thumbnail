@@ -107,21 +107,16 @@ Before/after full-suite timing comparison was not captured against a clean pre-e
 
 ## Color Support Status
 
-Status: blocked by missing real color model artifacts.
+Status: shipped as a mixed v1/v2 package.
 
 What exists now:
 
-- the bundled `placeholder_ae_v1_gray` model is grayscale only
-- the package now has explicit bundled-model selection via `VAEThumbnailInput.model`
+- the bundled `placeholder_ae_v1_gray` model is grayscale only and remains for backward compatibility
+- the package also bundles `placeholder_ae_v2_rgb`, a real color decoder trained on a public Places365 small balanced subset
+- the package has explicit bundled-model selection via `VAEThumbnailInput.model`
 - `VAEThumbnailColorMode` is public
-- `.automatic` returns grayscale with the current bundled model
-- `.color` throws `VAEThumbnailError.colorModelUnavailable`
-
-Missing artifacts for real color support:
-
-- a 3-channel encoder export analogous to `placeholder_ae_v1_encoder.npz`
-- a 3-channel compiled decoder analogous to `placeholder_ae_v1_decoder.mlmodelc`
-- matching metadata JSON with latent bounds and output-channel contract
+- `.automatic` prefers a compatible color model when the payload matches the RGB contract
+- `.grayscale` still forces grayscale output, even for the RGB model
 
 No fake tinting fallback was added.
 
@@ -129,8 +124,8 @@ No fake tinting fallback was added.
 
 1. The package currently relies on a bundled CoreML resource bundle. Future Filmy or external clients must preserve SwiftPM resource embedding when integrating the library.
 2. The model provenance is documented, but the training corpus is not a fully relicensed public dataset. If stricter OSS provenance rules apply, replace the model before the first release tag.
-3. The package README currently documents branch-based consumption before the first semver tag. External clients should switch to tagged releases once the first release is cut.
-4. Real color output is not yet available. The public API leaves space for it, but shipping color requires a separate model/export effort.
+3. The package now has a first public tag and a remote dependency path. Keep the Git URL and tag in sync when cutting later releases.
+4. The public RGB path is now available, but the legacy grayscale v1 payload contract still exists for compatibility.
 
 ## Planned Release Tag
 

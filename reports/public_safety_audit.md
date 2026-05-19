@@ -16,8 +16,8 @@ Audit the extracted `VAEThumbnailKit` package for accidental publication of:
 ## Included In The Public Package
 
 - Swift package source under `Sources/VAEThumbnailKit`
-- bundled decoder metadata at `Sources/VAEThumbnailKit/Resources/Model/placeholder_ae_v1.json`
-- bundled compiled CoreML decoder at `Sources/VAEThumbnailKit/Resources/Model/placeholder_ae_v1_decoder.mlmodelc`
+- bundled decoder metadata under `Sources/VAEThumbnailKit/Resources/Models/**/metadata.json`
+- bundled compiled CoreML decoders under `Sources/VAEThumbnailKit/Resources/Models/**/decoder.mlmodelc`
 - payload-only tests under `Tests/VAEThumbnailKitTests`
 - example CLI under `Examples/BasicThumbnailCLI`
 - package-local scripts, CI workflow, README, license, and reports
@@ -37,19 +37,26 @@ Audit the extracted `VAEThumbnailKit` package for accidental publication of:
 1. No secrets or credentials were copied. The package contains no API keys, auth tokens, signing identities, provisioning profiles, or analytics IDs.
 2. No raw images are shipped. Tests and examples use compact base64 payload strings only; no source JPEG/PNG fixtures or cached sample thumbs are included.
 3. The public package does not depend on Filmy app types. The package surface is plain Swift plus Apple frameworks; Filmy-specific integration remains in Filmy's thin `AEPlaceholderService` adapter.
-4. The bundled model artifact is technically safe from a private-data standpoint, but it does carry a provenance note. The shipped decoder and metadata were generated from the Filmy placeholder research pipeline, which trained on low-resolution Flickr thumbnail derivatives gathered in the private Filmy workspace. The training corpus itself is not redistributed here.
+4. The bundled model artifacts now have mixed provenance. `placeholder_ae_v1_gray` still comes from the original Filmy placeholder research pipeline and therefore carries the existing Flickr-thumbnail provenance note. `placeholder_ae_v2_rgb` was trained on a public Places365 small validation subset with a balanced cap and does not redistribute any source images.
 5. The package is a fresh repo. No private app history was copied into `vae-thumbnail`; only new package files and extracted resources are present.
 
 ## Residual Risk Note
 
 The main residual risk is not secrecy, but training-data provenance. The model files:
 
-- `Sources/VAEThumbnailKit/Resources/Model/placeholder_ae_v1.json`
-- `Sources/VAEThumbnailKit/Resources/Model/placeholder_ae_v1_decoder.mlmodelc/**`
+- `Sources/VAEThumbnailKit/Resources/Models/placeholder_ae_v1_gray/metadata.json`
+- `Sources/VAEThumbnailKit/Resources/Models/placeholder_ae_v1_gray/decoder.mlmodelc/**`
 
 are author-generated artifacts derived from third-party Flickr thumbnail inputs. That provenance is documented and no training images are redistributed, but this is not the same thing as a fully relicensed or owned training corpus.
 
-If a stricter OSS policy is required, replace the bundled model with a decoder retrained on an owned, synthetic, or explicitly licensed dataset before the first public release tag.
+The newer RGB model files:
+
+- `Sources/VAEThumbnailKit/Resources/Models/placeholder_ae_v2_rgb/metadata.json`
+- `Sources/VAEThumbnailKit/Resources/Models/placeholder_ae_v2_rgb/decoder.mlmodelc/**`
+
+were trained from public Places365 inputs and materially reduce the provenance concern for forward-looking color payloads.
+
+If a stricter OSS policy is required, retire `placeholder_ae_v1_gray` and move fully to a decoder retrained on owned, synthetic, or explicitly licensed inputs such as the public Places365-based v2 path.
 
 ## Verdict
 

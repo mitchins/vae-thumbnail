@@ -1,0 +1,41 @@
+program(1.0)
+[buildInfo = dict<tensor<string, []>, tensor<string, []>>({{"coremlc-component-MIL", "3520.4.1"}, {"coremlc-version", "3520.5.1"}, {"coremltools-component-torch", "2.9.0"}, {"coremltools-source-dialect", "TorchScript"}, {"coremltools-version", "9.0"}})]
+{
+    func main<ios17>(tensor<fp16, [1, 24]> latent) {
+            tensor<fp16, [256, 24]> from_latent_weight_to_fp16 = const()[name = tensor<string, []>("from_latent_weight_to_fp16"), val = tensor<fp16, [256, 24]>(BLOBFILE(path = tensor<string, []>("@model_path/weights/weight.bin"), offset = tensor<uint64, []>(64)))];
+            tensor<fp16, [256]> from_latent_bias_to_fp16 = const()[name = tensor<string, []>("from_latent_bias_to_fp16"), val = tensor<fp16, [256]>(BLOBFILE(path = tensor<string, []>("@model_path/weights/weight.bin"), offset = tensor<uint64, []>(12416)))];
+            tensor<fp16, [1, 256]> linear_0_cast_fp16 = linear(bias = from_latent_bias_to_fp16, weight = from_latent_weight_to_fp16, x = latent)[name = tensor<string, []>("linear_0_cast_fp16")];
+            tensor<int32, [4]> var_13 = const()[name = tensor<string, []>("op_13"), val = tensor<int32, [4]>([-1, 64, 2, 2])];
+            tensor<fp16, [1, 64, 2, 2]> input_1_cast_fp16 = reshape(shape = var_13, x = linear_0_cast_fp16)[name = tensor<string, []>("input_1_cast_fp16")];
+            tensor<string, []> input_3_pad_type_0 = const()[name = tensor<string, []>("input_3_pad_type_0"), val = tensor<string, []>("custom")];
+            tensor<int32, [4]> input_3_pad_0 = const()[name = tensor<string, []>("input_3_pad_0"), val = tensor<int32, [4]>([1, 1, 1, 1])];
+            tensor<int32, [2]> input_3_strides_0 = const()[name = tensor<string, []>("input_3_strides_0"), val = tensor<int32, [2]>([2, 2])];
+            tensor<int32, [2]> input_3_dilations_0 = const()[name = tensor<string, []>("input_3_dilations_0"), val = tensor<int32, [2]>([1, 1])];
+            tensor<int32, []> input_3_groups_0 = const()[name = tensor<string, []>("input_3_groups_0"), val = tensor<int32, []>(1)];
+            tensor<int32, [4]> input_3_has_output_shape_output_shape_0 = const()[name = tensor<string, []>("input_3_has_output_shape_output_shape_0"), val = tensor<int32, [4]>([1, 48, 4, 4])];
+            tensor<fp16, [64, 48, 4, 4]> deconv1_weight_to_fp16 = const()[name = tensor<string, []>("deconv1_weight_to_fp16"), val = tensor<fp16, [64, 48, 4, 4]>(BLOBFILE(path = tensor<string, []>("@model_path/weights/weight.bin"), offset = tensor<uint64, []>(12992)))];
+            tensor<fp16, [48]> deconv1_bias_to_fp16 = const()[name = tensor<string, []>("deconv1_bias_to_fp16"), val = tensor<fp16, [48]>(BLOBFILE(path = tensor<string, []>("@model_path/weights/weight.bin"), offset = tensor<uint64, []>(111360)))];
+            tensor<fp16, [1, 48, 4, 4]> input_3_has_output_shape_cast_fp16 = conv_transpose(bias = deconv1_bias_to_fp16, dilations = input_3_dilations_0, groups = input_3_groups_0, output_shape = input_3_has_output_shape_output_shape_0, pad = input_3_pad_0, pad_type = input_3_pad_type_0, strides = input_3_strides_0, weight = deconv1_weight_to_fp16, x = input_1_cast_fp16)[name = tensor<string, []>("input_3_has_output_shape_cast_fp16")];
+            tensor<fp16, [1, 48, 4, 4]> input_5_cast_fp16 = relu(x = input_3_has_output_shape_cast_fp16)[name = tensor<string, []>("input_5_cast_fp16")];
+            tensor<string, []> input_7_pad_type_0 = const()[name = tensor<string, []>("input_7_pad_type_0"), val = tensor<string, []>("custom")];
+            tensor<int32, [4]> input_7_pad_0 = const()[name = tensor<string, []>("input_7_pad_0"), val = tensor<int32, [4]>([1, 1, 1, 1])];
+            tensor<int32, [2]> input_7_strides_0 = const()[name = tensor<string, []>("input_7_strides_0"), val = tensor<int32, [2]>([2, 2])];
+            tensor<int32, [2]> input_7_dilations_0 = const()[name = tensor<string, []>("input_7_dilations_0"), val = tensor<int32, [2]>([1, 1])];
+            tensor<int32, []> input_7_groups_0 = const()[name = tensor<string, []>("input_7_groups_0"), val = tensor<int32, []>(1)];
+            tensor<int32, [4]> input_7_has_output_shape_output_shape_0 = const()[name = tensor<string, []>("input_7_has_output_shape_output_shape_0"), val = tensor<int32, [4]>([1, 24, 8, 8])];
+            tensor<fp16, [48, 24, 4, 4]> deconv2_weight_to_fp16 = const()[name = tensor<string, []>("deconv2_weight_to_fp16"), val = tensor<fp16, [48, 24, 4, 4]>(BLOBFILE(path = tensor<string, []>("@model_path/weights/weight.bin"), offset = tensor<uint64, []>(111552)))];
+            tensor<fp16, [24]> deconv2_bias_to_fp16 = const()[name = tensor<string, []>("deconv2_bias_to_fp16"), val = tensor<fp16, [24]>(BLOBFILE(path = tensor<string, []>("@model_path/weights/weight.bin"), offset = tensor<uint64, []>(148480)))];
+            tensor<fp16, [1, 24, 8, 8]> input_7_has_output_shape_cast_fp16 = conv_transpose(bias = deconv2_bias_to_fp16, dilations = input_7_dilations_0, groups = input_7_groups_0, output_shape = input_7_has_output_shape_output_shape_0, pad = input_7_pad_0, pad_type = input_7_pad_type_0, strides = input_7_strides_0, weight = deconv2_weight_to_fp16, x = input_5_cast_fp16)[name = tensor<string, []>("input_7_has_output_shape_cast_fp16")];
+            tensor<fp16, [1, 24, 8, 8]> input_9_cast_fp16 = relu(x = input_7_has_output_shape_cast_fp16)[name = tensor<string, []>("input_9_cast_fp16")];
+            tensor<string, []> input_pad_type_0 = const()[name = tensor<string, []>("input_pad_type_0"), val = tensor<string, []>("custom")];
+            tensor<int32, [4]> input_pad_0 = const()[name = tensor<string, []>("input_pad_0"), val = tensor<int32, [4]>([1, 1, 1, 1])];
+            tensor<int32, [2]> input_strides_0 = const()[name = tensor<string, []>("input_strides_0"), val = tensor<int32, [2]>([2, 2])];
+            tensor<int32, [2]> input_dilations_0 = const()[name = tensor<string, []>("input_dilations_0"), val = tensor<int32, [2]>([1, 1])];
+            tensor<int32, []> input_groups_0 = const()[name = tensor<string, []>("input_groups_0"), val = tensor<int32, []>(1)];
+            tensor<int32, [4]> input_has_output_shape_output_shape_0 = const()[name = tensor<string, []>("input_has_output_shape_output_shape_0"), val = tensor<int32, [4]>([1, 3, 16, 16])];
+            tensor<fp16, [24, 3, 4, 4]> deconv3_weight_to_fp16 = const()[name = tensor<string, []>("deconv3_weight_to_fp16"), val = tensor<fp16, [24, 3, 4, 4]>(BLOBFILE(path = tensor<string, []>("@model_path/weights/weight.bin"), offset = tensor<uint64, []>(148608)))];
+            tensor<fp16, [3]> deconv3_bias_to_fp16 = const()[name = tensor<string, []>("deconv3_bias_to_fp16"), val = tensor<fp16, [3]>([-0x1.918p-5, 0x1.ad4p-5, 0x1.4e8p-9])];
+            tensor<fp16, [1, 3, 16, 16]> input_has_output_shape_cast_fp16 = conv_transpose(bias = deconv3_bias_to_fp16, dilations = input_dilations_0, groups = input_groups_0, output_shape = input_has_output_shape_output_shape_0, pad = input_pad_0, pad_type = input_pad_type_0, strides = input_strides_0, weight = deconv3_weight_to_fp16, x = input_9_cast_fp16)[name = tensor<string, []>("input_has_output_shape_cast_fp16")];
+            tensor<fp16, [1, 3, 16, 16]> var_53 = sigmoid(x = input_has_output_shape_cast_fp16)[name = tensor<string, []>("op_53_cast_fp16")];
+        } -> (var_53);
+}
