@@ -9,6 +9,7 @@ private enum CLIError: LocalizedError {
     case invalidArgument(String)
     case invalidColorMode(String)
     case invalidInteger(String, String)
+    case invalidDimension(String, Int)
     case failedToCreateImageDestination(URL)
     case failedToWriteImage(URL)
 
@@ -22,6 +23,8 @@ private enum CLIError: LocalizedError {
             "Unsupported color mode: \(value). Use grayscale, color, or automatic."
         case let .invalidInteger(flag, value):
             "Invalid integer for \(flag): \(value)."
+        case let .invalidDimension(flag, value):
+            "Invalid dimension for \(flag): \(value). Must be greater than zero."
         case let .failedToCreateImageDestination(url):
             "Could not create an image destination at \(url.path)."
         case let .failedToWriteImage(url):
@@ -76,6 +79,13 @@ private struct Arguments {
             }
         }
 
+        guard width > 0 else {
+            throw CLIError.invalidDimension("--width", width)
+        }
+        guard height > 0 else {
+            throw CLIError.invalidDimension("--height", height)
+        }
+
         return Arguments(
             payload: payload,
             outputURL: outputURL,
@@ -119,7 +129,7 @@ private struct BasicThumbnailCLI {
                 "Wrote \(output.renderedColorMode.rawValue) thumbnail \(Int(output.pixelSize.width))x\(Int(output.pixelSize.height)) to \(arguments.outputURL.path)"
             )
         } catch {
-            fputs("error: \(error.localizedDescription)\n", stderr)
+            FileHandle.standardError.write(Data("error: \(error.localizedDescription)\n".utf8))
             Arguments.printUsage()
             Foundation.exit(1)
         }

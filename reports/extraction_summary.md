@@ -129,7 +129,7 @@ No fake tinting fallback was added.
 
 ## Planned Release Tag
 
-Planned first public package tag: `1.0.0`
+First public package tag: `1.0.0`
 
 ## Suggested Public Repo Description
 

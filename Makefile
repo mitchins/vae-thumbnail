@@ -1,4 +1,4 @@
-SHELL := /bin/zsh
+SHELL := /bin/sh
 
 .PHONY: test test-coverage lint format sonar-coverage
 

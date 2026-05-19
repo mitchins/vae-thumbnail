@@ -78,11 +78,11 @@
     "validation_count": 1168.0
   },
   "artifacts": {
-    "checkpoint_path": "/Users/mitchellcurrie/Projects/filmy/research/placeholders/outputs/models/placeholder_ae_v2_rgb.pt",
+    "checkpoint_path": "outputs/models/placeholder_ae_v2_rgb.pt",
     "checkpoint_bytes": 486823,
-    "decoder_package_path": "/Users/mitchellcurrie/Projects/filmy/research/placeholders/outputs/models/placeholder_ae_v2_rgb_decoder.mlpackage",
+    "decoder_package_path": "outputs/models/placeholder_ae_v2_rgb_decoder.mlpackage",
     "decoder_package_bytes": 157974,
-    "compiled_model_path": "/Users/mitchellcurrie/Projects/filmy/research/placeholders/outputs/models/compiled/placeholder_ae_v2_rgb_decoder.mlmodelc",
+    "compiled_model_path": "outputs/models/compiled/placeholder_ae_v2_rgb_decoder.mlmodelc",
     "compiled_model_bytes": 160576
   },
   "reconstruction_metrics": {

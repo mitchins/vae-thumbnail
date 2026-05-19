@@ -123,6 +123,75 @@ final class VAEThumbnailGeneratorTests: XCTestCase {
         }
     }
 
+    func testErrorDescriptionsStayStableForAllCases() {
+        let cases: [(error: VAEThumbnailError, description: String)] = [
+            (
+                .noBundledModelsAvailable,
+                "No bundled VAE thumbnail models are available in the package resources."
+            ),
+            (
+                .metadataNotFound(model: .grayscaleV1),
+                "The metadata.json file for bundled model placeholder_ae_v1_gray is missing from the package resources."
+            ),
+            (
+                .modelNotFound(model: .rgbV2),
+                "The decoder.mlmodelc bundle for bundled model placeholder_ae_v2_rgb is missing from the package resources."
+            ),
+            (
+                .invalidMetadata,
+                "The bundled VAE thumbnail metadata is invalid."
+            ),
+            (
+                .invalidPayloadBase64,
+                "The supplied thumbnail payload is not valid base64."
+            ),
+            (
+                .invalidPayloadLength(expectedBytes: 18, actualBytes: 24),
+                "The supplied thumbnail payload decoded to 24 bytes instead of 18."
+            ),
+            (
+                .invalidOutputSize(CGSize(width: 0, height: 0)),
+                "The requested thumbnail output size 0.0x0.0 is invalid."
+            ),
+            (
+                .unexpectedModelInterface,
+                "The bundled CoreML decoder does not expose a usable input/output pair."
+            ),
+            (
+                .unexpectedOutputShape(elementCount: 12, expectedPixels: 16),
+                "The decoder output shape is unsupported. Got 12 values for 16 expected pixels."
+            ),
+            (
+                .requestedModelUnavailable(.rgbV2),
+                "The requested bundled model placeholder_ae_v2_rgb is not available in this package build."
+            ),
+            (
+                .noCompatibleModelForPayload(
+                    actualBytes: 18,
+                    requestedColorMode: .color,
+                    requestedModel: nil
+                ),
+                "No bundled model can decode a 18-byte payload for color mode using automatic bundled selection."
+            ),
+            (
+                .unsupportedOutputType,
+                "The decoder returned an unsupported output type."
+            ),
+            (
+                .colorModelUnavailable,
+                "A compatible color decoder is not available in this package build."
+            ),
+            (
+                .imageCreationFailed,
+                "Failed to create an image from the decoder output."
+            )
+        ]
+
+        for item in cases {
+            XCTAssertEqual(item.error.errorDescription, item.description)
+        }
+    }
+
     private func makeInvalidMetadataBundle() throws -> (Bundle, URL) {
         let fileManager = FileManager.default
         let bundleURL = fileManager.temporaryDirectory

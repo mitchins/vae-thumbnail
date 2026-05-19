@@ -49,7 +49,7 @@ public enum VAEThumbnailError: LocalizedError, Equatable {
         case .unsupportedOutputType:
             return "The decoder returned an unsupported output type."
         case .colorModelUnavailable:
-            return "A real color decoder is not bundled. Only grayscale-capable models are available."
+            return "A compatible color decoder is not available in this package build."
         case .imageCreationFailed:
             return "Failed to create an image from the decoder output."
         }

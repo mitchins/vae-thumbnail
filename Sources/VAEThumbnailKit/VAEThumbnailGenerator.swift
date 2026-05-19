@@ -165,8 +165,8 @@ public final class VAEThumbnailGenerator: VAEThumbnailGenerating, @unchecked Sen
             return resources
         }
 
-        if configuration.colorMode == .color,
-           !resourcesByModel.values.contains(where: \ .supportsColorOutput)
+          if configuration.colorMode == .color,
+              !resourcesByModel.values.contains(where: \.supportsColorOutput)
         {
             throw VAEThumbnailError.colorModelUnavailable
         }
@@ -279,6 +279,9 @@ public final class VAEThumbnailGenerator: VAEThumbnailGenerating, @unchecked Sen
             else {
                 throw VAEThumbnailError.invalidMetadata
             }
+            guard metadata.quantizeBits == 8 else {
+                throw VAEThumbnailError.invalidMetadata
+            }
 
             let configuration = MLModelConfiguration()
             #if targetEnvironment(simulator)
@@ -294,9 +297,12 @@ public final class VAEThumbnailGenerator: VAEThumbnailGenerating, @unchecked Sen
                 throw VAEThumbnailError.unexpectedModelInterface
             }
 
-            let latentRange = zip(metadata.latentMin, metadata.latentMax).map { minimum, maximum in
+            let latentRange = try zip(metadata.latentMin, metadata.latentMax).map { minimum, maximum in
                 let delta = maximum - minimum
-                return delta > 0 ? delta : 1.0
+                guard delta > 0 else {
+                    throw VAEThumbnailError.invalidMetadata
+                }
+                return delta
             }
 
             loaded[bundledModel] = LoadedResources(

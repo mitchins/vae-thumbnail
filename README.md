@@ -35,11 +35,11 @@ dependencies: [
 ]
 ```
 
-For external consumption before the first tag exists, pin the main branch:
+If you need an unreleased snapshot, pin a revision explicitly instead of tracking a branch:
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/mitchins/vae-thumbnail.git", branch: "main")
+  .package(url: "https://github.com/mitchins/vae-thumbnail.git", revision: "<commit-sha>")
 ]
 ```
 
