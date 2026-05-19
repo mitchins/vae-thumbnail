@@ -1,5 +1,8 @@
 import CoreGraphics
 import Foundation
+#if canImport(AppKit)
+    import AppKit
+#endif
 @testable import VAEThumbnailKit
 import XCTest
 
@@ -95,22 +98,62 @@ final class VAEThumbnailGeneratorTests: XCTestCase {
         XCTAssertEqual(output.renderedColorMode, .grayscale)
     }
 
-    func testRequestedOutputSizeResizesDecodedImage() async throws {
+    func testRequestedOutputSizeResizesDecodedImageAcrossQualities() async throws {
         let generator = try VAEThumbnailGenerator()
-        let configuration = VAEThumbnailConfiguration(
-            outputSize: CGSize(width: 32, height: 24),
-            colorMode: .automatic,
-            quality: .best
-        )
 
-        let output = try await generator.generateThumbnail(
-            from: .init(latentPayload: validPayload),
-            configuration: configuration
-        )
+        let cases: [(
+            input: VAEThumbnailInput,
+            configuration: VAEThumbnailConfiguration,
+            expectedPixelSize: CGSize,
+            expectedColorMode: VAEThumbnailRenderedColorMode
+        )] = [
+            (
+                .init(latentPayload: validPayload),
+                VAEThumbnailConfiguration(
+                    outputSize: CGSize(width: 32, height: 24),
+                    colorMode: .automatic,
+                    quality: .balanced
+                ),
+                CGSize(width: 32, height: 24),
+                .grayscale
+            ),
+            (
+                .init(latentPayload: validRGBPayload),
+                VAEThumbnailConfiguration(
+                    outputSize: CGSize(width: 20, height: 18),
+                    colorMode: .color,
+                    quality: .fast
+                ),
+                CGSize(width: 20, height: 18),
+                .color
+            ),
+            (
+                .init(latentPayload: validPayload),
+                VAEThumbnailConfiguration(
+                    outputSize: CGSize(width: 24, height: 24),
+                    colorMode: .automatic,
+                    quality: .best
+                ),
+                CGSize(width: 24, height: 24),
+                .grayscale
+            )
+        ]
 
-        XCTAssertEqual(output.pixelSize, CGSize(width: 32, height: 24))
-        XCTAssertEqual(output.renderedColorMode, .grayscale)
+        for item in cases {
+            let output = try await generator.generateThumbnail(from: item.input, configuration: item.configuration)
+            XCTAssertEqual(output.pixelSize, item.expectedPixelSize)
+            XCTAssertEqual(output.renderedColorMode, item.expectedColorMode)
+        }
     }
+
+    #if canImport(AppKit)
+        func testOutputNSImageMatchesPixelSize() async throws {
+            let generator = try VAEThumbnailGenerator()
+            let output = try await generator.generateThumbnail(from: .init(latentPayload: validPayload))
+
+            XCTAssertEqual(output.nsImage.size, output.pixelSize)
+        }
+    #endif
 
     func testInvalidBundledMetadataThrowsInvalidMetadata() throws {
         let (bundle, bundleURL) = try makeInvalidMetadataBundle()
@@ -120,6 +163,127 @@ final class VAEThumbnailGeneratorTests: XCTestCase {
 
         XCTAssertThrowsError(try VAEThumbnailGenerator(bundle: bundle)) { error in
             XCTAssertEqual(error as? VAEThumbnailError, .invalidMetadata)
+        }
+    }
+
+    func testGeneratorInitializationRejectsMalformedBundles() throws {
+        let validMetadata = try makeMetadataJSON()
+        let invalidQuantizeMetadata = try makeMetadataJSON(quantizeBits: 7)
+        let invalidLatentRangeMetadata = try makeMetadataJSON(latentMax: Array(repeating: 0.0, count: 18))
+
+        let cases: [(
+            fixtures: [TemporaryModelFixture],
+            expectedError: VAEThumbnailError
+        )] = [
+            (
+                [],
+                .noBundledModelsAvailable
+            ),
+            (
+                [
+                    .init(model: .grayscaleV1, metadataJSON: nil, includeDecoder: true)
+                ],
+                .metadataNotFound(model: .grayscaleV1)
+            ),
+            (
+                [
+                    .init(model: .grayscaleV1, metadataJSON: validMetadata, includeDecoder: false)
+                ],
+                .modelNotFound(model: .grayscaleV1)
+            ),
+            (
+                [
+                    .init(model: .grayscaleV1, metadataJSON: invalidQuantizeMetadata, includeDecoder: true)
+                ],
+                .invalidMetadata
+            ),
+            (
+                [
+                    .init(model: .grayscaleV1, metadataJSON: invalidLatentRangeMetadata, includeDecoder: true)
+                ],
+                .invalidMetadata
+            )
+        ]
+
+        for item in cases {
+            let (bundle, bundleURL) = try makeTemporaryBundle(models: item.fixtures)
+            defer {
+                try? FileManager.default.removeItem(at: bundleURL)
+            }
+
+            XCTAssertThrowsError(try VAEThumbnailGenerator(bundle: bundle)) { error in
+                XCTAssertEqual(error as? VAEThumbnailError, item.expectedError)
+            }
+        }
+    }
+
+    func testGenerateThumbnailRejectsInvalidSelectionAndOutputMetadata() async throws {
+        let validMetadata = try makeMetadataJSON()
+        let zeroOutputSizeMetadata = try makeMetadataJSON(outputSize: 0)
+        let mismatchedOutputSizeMetadata = try makeMetadataJSON(outputSize: 15)
+
+        let baseFixtures: [TemporaryModelFixture] = [
+            .init(model: .grayscaleV1, metadataJSON: validMetadata, includeDecoder: true)
+        ]
+
+        let cases: [(
+            fixtures: [TemporaryModelFixture],
+            input: VAEThumbnailInput,
+            configuration: VAEThumbnailConfiguration,
+            expectedError: VAEThumbnailError
+        )] = [
+            (
+                baseFixtures,
+                .init(latentPayload: validPayload, model: .rgbV2),
+                .default,
+                .requestedModelUnavailable(.rgbV2)
+            ),
+            (
+                baseFixtures,
+                .init(latentPayload: "AA==", model: .grayscaleV1),
+                .default,
+                .invalidPayloadLength(expectedBytes: 18, actualBytes: 1)
+            ),
+            (
+                baseFixtures,
+                .init(latentPayload: validPayload, model: .grayscaleV1),
+                VAEThumbnailConfiguration(colorMode: .color),
+                .colorModelUnavailable
+            ),
+            (
+                [
+                    .init(model: .grayscaleV1, metadataJSON: zeroOutputSizeMetadata, includeDecoder: true)
+                ],
+                .init(latentPayload: validPayload),
+                .default,
+                .invalidMetadata
+            ),
+            (
+                [
+                    .init(model: .grayscaleV1, metadataJSON: mismatchedOutputSizeMetadata, includeDecoder: true)
+                ],
+                .init(latentPayload: validPayload),
+                .default,
+                .unexpectedOutputShape(elementCount: 256, expectedPixels: 225)
+            )
+        ]
+
+        for item in cases {
+            let (bundle, bundleURL) = try makeTemporaryBundle(models: item.fixtures)
+            defer {
+                try? FileManager.default.removeItem(at: bundleURL)
+            }
+
+            let generator = try VAEThumbnailGenerator(bundle: bundle)
+
+            do {
+                _ = try await generator.generateThumbnail(from: item.input, configuration: item.configuration)
+                XCTFail("Expected generation to throw \(item.expectedError).")
+            } catch let error as VAEThumbnailError {
+                XCTAssertEqual(error, item.expectedError)
+            } catch {
+                XCTFail("Expected VAEThumbnailError, got \(error).")
+            }
         }
     }
 
@@ -271,5 +435,79 @@ final class VAEThumbnailGeneratorTests: XCTestCase {
           "latent_max": [1.0]
         }
         """
+    }
+
+    private struct TemporaryModelFixture {
+        let model: VAEThumbnailBundledModel
+        let metadataJSON: String?
+        let includeDecoder: Bool
+    }
+
+    private func makeTemporaryBundle(models: [TemporaryModelFixture]) throws -> (Bundle, URL) {
+        let fileManager = FileManager.default
+        let bundleURL = fileManager.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("bundle")
+
+        try fileManager.createDirectory(at: bundleURL, withIntermediateDirectories: true)
+        try minimalBundleInfoPlist().write(
+            to: bundleURL.appendingPathComponent("Info.plist"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        for fixture in models {
+            let modelURL = bundleURL
+                .appendingPathComponent("Models", isDirectory: true)
+                .appendingPathComponent(fixture.model.identifier, isDirectory: true)
+            try fileManager.createDirectory(at: modelURL, withIntermediateDirectories: true)
+
+            if fixture.includeDecoder {
+                let sourceModelURL = try bundledModelDirectory(for: fixture.model)
+                try fileManager.copyItem(
+                    at: sourceModelURL.appendingPathComponent("decoder.mlmodelc", isDirectory: true),
+                    to: modelURL.appendingPathComponent("decoder.mlmodelc", isDirectory: true)
+                )
+            }
+
+            if let metadataJSON = fixture.metadataJSON {
+                try metadataJSON.write(
+                    to: modelURL.appendingPathComponent("metadata.json"),
+                    atomically: true,
+                    encoding: .utf8
+                )
+            }
+        }
+
+        let bundle = try XCTUnwrap(Bundle(url: bundleURL))
+        return (bundle, bundleURL)
+    }
+
+    private func makeMetadataJSON(
+        modelID: String = VAEThumbnailBundledModel.grayscaleV1.identifier,
+        outputSize: Int = 16,
+        latentDim: Int = 18,
+        quantizeBits: Int = 8,
+        colorChannels: Int = 1,
+        latentMin: [Double]? = nil,
+        latentMax: [Double]? = nil
+    ) throws -> String {
+        let latentMin = latentMin ?? Array(repeating: 0.0, count: latentDim)
+        let latentMax = latentMax ?? Array(repeating: 1.0, count: latentDim)
+
+        let payload: [String: Any] = [
+            "name": "placeholder_test_model",
+            "model_id": modelID,
+            "input_size": outputSize,
+            "output_size": outputSize,
+            "color_channels": colorChannels,
+            "latent_dim": latentDim,
+            "quantize_bits": quantizeBits,
+            "latent_min": latentMin,
+            "latent_max": latentMax
+        ]
+
+        let data = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+        return String(decoding: data, as: UTF8.self)
     }
 }

@@ -31,7 +31,7 @@ public struct VAEThumbnailOutput: @unchecked Sendable {
     }
 
     public var pixelSize: CGSize {
-        CGSize(width: cgImage.width, height: cgImage.height)
+        CGSize(width: CGFloat(cgImage.width), height: CGFloat(cgImage.height))
     }
 
     public var modelIdentifier: String {
