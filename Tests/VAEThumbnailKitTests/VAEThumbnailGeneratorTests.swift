@@ -181,6 +181,33 @@ final class VAEThumbnailGeneratorTests: XCTestCase {
         }
     }
 
+    func testGeneratorInitializationRejectsEmptyBundleResources() throws {
+        let (bundle, bundleURL) = try makeTemporaryBundle(models: [])
+        defer {
+            try? FileManager.default.removeItem(at: bundleURL)
+        }
+
+        XCTAssertThrowsError(try VAEThumbnailGenerator(bundle: bundle)) { error in
+            XCTAssertEqual(error as? VAEThumbnailError, .noBundledModelsAvailable)
+        }
+    }
+
+    func testGenerateThumbnailRejectsZeroSizedOutputRequest() async throws {
+        let generator = try VAEThumbnailGenerator()
+
+        do {
+            _ = try await generator.generateThumbnail(
+                from: .init(latentPayload: validPayload),
+                configuration: VAEThumbnailConfiguration(outputSize: CGSize(width: 0, height: 16))
+            )
+            XCTFail("Expected zero-sized output to throw.")
+        } catch let error as VAEThumbnailError {
+            XCTAssertEqual(error, .invalidOutputSize(CGSize(width: 0, height: 16)))
+        } catch {
+            XCTFail("Expected VAEThumbnailError, got \(error).")
+        }
+    }
+
     func testGeneratorInitializationRejectsMalformedBundles() throws {
         let validMetadata = try makeMetadataJSON()
         let invalidQuantizeMetadata = try makeMetadataJSON(quantizeBits: 7)
